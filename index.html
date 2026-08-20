@@ -2,15 +2,15 @@
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
-    <title>2048 Tetris Battle: ONLINE</title>
-    <!-- İnternet üzerinden haberleşmek için Socket.io CDN'i ekliyoruz -->
+    <title>2048 Tetris Battle: LOBİ SİSTEMİ</title>
+    <!-- İnternet üzerinden haberleşmek için Socket.io CDN -->
     <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         body { background-color: #0f0f16; color: white; display: flex; flex-direction: column; align-items: center; height: 100vh; overflow: hidden; user-select: none; }
         #start-screen { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100vh; width: 100vw; background: radial-gradient(circle at center, #2a2a3a 0%, #0f0f16 100%); z-index: 1000; position: absolute; }
         h1 { font-size: 48px; text-shadow: 0 0 20px rgba(255,255,255,0.8); margin-bottom: 30px; text-transform: uppercase; }
-        .selection-container { display: flex; gap: 50px; margin-bottom: 40px; }
+        .selection-container { display: flex; gap: 50px; margin-bottom: 20px; }
         .player-select { background: rgba(0,0,0,0.5); padding: 20px; border-radius: 15px; border: 2px solid #555; width: 340px; text-align: center; }
         .class-wrapper { margin-bottom: 15px; background: rgba(0,0,0,0.3); padding: 10px; border-radius: 10px; }
         .class-btn { background: #222; border: 2px solid #444; color: white; padding: 10px; margin: 0 0 8px 0; width: 100%; border-radius: 8px; cursor: pointer; font-size: 16px; font-weight: bold; transition: all 0.2s; display: flex; justify-content: space-between; align-items: center; }
@@ -18,9 +18,14 @@
         .class-btn.selected { background: #2196F3; border-color: #fff; box-shadow: 0 0 10px #2196F3; }
         .class-stats { font-size: 12px; color: #fff; font-weight: bold; margin-bottom: 5px; }
         .class-desc { font-size: 11px; color: #aaa; line-height: 1.4; }
+        
+        #room-input { padding: 15px; font-size: 20px; border-radius: 8px; border: 2px solid #2196F3; background: #222; color: white; text-align: center; width: 340px; margin-bottom: 20px; letter-spacing: 2px;}
+        #room-input:focus { outline: none; box-shadow: 0 0 15px #2196F3; }
+
         #start-btn { background: linear-gradient(45deg, #ff416c, #ff4b2b); border: none; color: white; padding: 15px 50px; font-size: 24px; font-weight: 900; border-radius: 30px; cursor: pointer; text-transform: uppercase; box-shadow: 0 0 20px rgba(255,75,43,0.6); transition: transform 0.2s; }
         #start-btn:hover { transform: scale(1.1); }
         #start-btn:disabled { background: #555; cursor: not-allowed; box-shadow: none; transform: none; }
+        
         #game-screen { display: none; width: 100%; height: 100%; flex-direction: column; align-items: center; padding-top: 10px; }
         .battle-arena { display: flex; gap: 60px; position: relative; margin-top: 10px; }
         .player-box { display: flex; flex-direction: column; align-items: center; background: rgba(255, 255, 255, 0.03); padding: 20px; border-radius: 15px; border: 2px solid #333; position: relative; width: 420px; }
@@ -78,7 +83,12 @@
                 <div id="my-classes"></div>
             </div>
         </div>
-        <button id="start-btn">SAVAŞA BAŞLA</button>
+        
+        <!-- YENİ EKLENEN ODA NUMARASI KISMI -->
+        <div>
+            <input type="text" id="room-input" placeholder="Oda Numarası Belirle">
+        </div>
+        <button id="start-btn">Odaya Katıl</button>
     </div>
 
     <div id="game-screen">
@@ -127,12 +137,12 @@
 
     <div id="game-over">
         <h2 id="winner-text">OYUNCU KAZANDI!</h2>
-        <button id="restart-btn" onclick="location.reload()">Yeni Rakip Bul</button>
+        <button id="restart-btn" onclick="location.reload()">Yeni Maça Gir</button>
     </div>
 
     <script>
-        // DIKKAT: AŞAĞIDAKİ ADRESİ KENDİ KURDUĞUN SUNUCU LİNKİYLE DEĞİŞTİR
-        const socket = io("https://2048-backend-xyz.onrender.com");
+        // BABA BURAYA RENDER'DAN ALDIĞIN LİNKİ YAZ! ÖRN: "https://backend-xyz.onrender.com"
+        const socket = io("https://BURAYA_RENDER_SUNUCU_LINKINI_YAZ");
 
         const ROWS = 8;
         const COLS = 6;
@@ -174,14 +184,27 @@
         }
         setupClassSelect();
 
+        // Odaya Katılma Mantığı
         document.getElementById('start-btn').onclick = () => {
-            socket.emit('join_queue', { classType: mySelectedClass });
-            document.getElementById('start-btn').innerText = 'Sunucuya Bağlanıyor...';
+            const roomId = document.getElementById('room-input').value.trim();
+            if (!roomId) {
+                alert("Keke önce bir oda numarası girmelisin! (Örn: 1453)");
+                return;
+            }
+
+            socket.emit('join_room', { classType: mySelectedClass, roomId: roomId });
+            document.getElementById('start-btn').innerText = 'Bağlanıyor...';
+            document.getElementById('start-btn').disabled = true;
         };
 
         socket.on('waiting', (msg) => {
             document.getElementById('start-btn').innerText = msg;
-            document.getElementById('start-btn').disabled = true;
+        });
+
+        socket.on('room_full', (msg) => {
+            alert(msg);
+            document.getElementById('start-btn').innerText = 'Odaya Katıl';
+            document.getElementById('start-btn').disabled = false;
         });
 
         socket.on('game_start', (data) => {
@@ -223,7 +246,7 @@
 
         socket.on('opponent_disconnected', () => {
             if (isGameActive) {
-                endGame("Rakip Bağlantıyı Kopardı! Sen Kazandın 🏆");
+                endGame("Rakip Kaçtı! Hükmen Kazandın 🏆");
             }
         });
 
