@@ -84,7 +84,7 @@
             </div>
         </div>
         
-        <!-- YENİ: BAĞLANTI DURUMU GÖSTERGESİ -->
+        <!-- BAĞLANTI DURUMU GÖSTERGESİ -->
         <div id="connection-status" style="color: #ffeb3b; margin-bottom: 15px; font-weight: bold; font-size: 16px;">
             ⏳ Sunucu Aranıyor... (Uyku modundaysa 1 dk sürebilir)
         </div>
@@ -92,24 +92,24 @@
         <div>
             <input type="text" id="room-input" placeholder="Oda Numarası Belirle">
         </div>
-        <!-- YENİ: Başlangıçta Buton Kilitli -->
+        <!-- Başlangıçta Buton Kilitli -->
         <button id="start-btn" disabled>Odaya Katıl</button>
     </div>
 
     <div id="game-screen">
         <div class="battle-arena">
-            <!-- SENİN EKRANIN -->
+            <!-- P1 KUTUSU -->
             <div class="player-box p1-box" id="p1-box">
                 <div class="ultimate-btn" id="p1-ult">RAGE<br>(Q/Enter)</div>
                 <div class="header-info">
-                    <div class="player-title" style="color: #2196F3;"><span class="class-icon" id="p1-icon">⚔️</span> SEN</div>
+                    <div class="player-title" style="color: #2196F3;"><span class="class-icon" id="p1-icon">⚔️</span> P1 (SOL)</div>
                 </div>
                 <div class="bars-container">
                     <div class="bar-bg" style="height: 26px;"><div id="p1-hp-fill" class="bar-fill hp-fill" style="width:100%"></div><div id="p1-hp-text" class="bar-text">❤️ 250 / 250</div></div>
                     <div class="bar-bg" style="height: 26px;"><div id="p1-shield-fill" class="bar-fill shield-fill" style="width:100%"></div><div id="p1-shield-text" class="bar-text">🛡️ 50 / 50</div></div>
                     <div class="bar-bg" style="height: 22px;"><div id="p1-rage-fill" class="bar-fill rage-fill" style="width:0%"></div><div id="p1-rage-text" class="bar-text" style="font-size: 13px;">🔥 ÖFKE: %0</div></div>
                 </div>
-                <!-- YENİ: ID DÜZELTİLDİ -->
+                <!-- ID DÜZELTİLDİ -->
                 <div id="gridp1" class="tetris-grid"></div>
                 <div class="bars-container" style="margin-top:15px; margin-bottom:0;">
                     <div class="bar-bg" style="height: 26px; border-color:#9c27b0;">
@@ -120,17 +120,17 @@
                 <div class="controls-hint">YÖN TUŞLARI veya WASD: Hareket | Q veya Enter: Ultimate</div>
             </div>
 
-            <!-- RAKİBİN EKRANI -->
+            <!-- P2 KUTUSU -->
             <div class="player-box p2-box" id="p2-box">
                 <div class="header-info">
-                    <div class="player-title" style="color: #f44336;"><span class="class-icon" id="p2-icon">🛡️</span> RAKİP</div>
+                    <div class="player-title" style="color: #f44336;"><span class="class-icon" id="p2-icon">🛡️</span> P2 (SAĞ)</div>
                 </div>
                 <div class="bars-container">
                     <div class="bar-bg" style="height: 26px;"><div id="p2-hp-fill" class="bar-fill hp-fill" style="width:100%"></div><div id="p2-hp-text" class="bar-text">❤️ 250 / 250</div></div>
                     <div class="bar-bg" style="height: 26px;"><div id="p2-shield-fill" class="bar-fill shield-fill" style="width:100%"></div><div id="p2-shield-text" class="bar-text">🛡️ 50 / 50</div></div>
                     <div class="bar-bg" style="height: 22px;"><div id="p2-rage-fill" class="bar-fill rage-fill" style="width:0%"></div><div id="p2-rage-text" class="bar-text" style="font-size: 13px;">🔥 ÖFKE: %0</div></div>
                 </div>
-                <!-- YENİ: ID DÜZELTİLDİ -->
+                <!-- ID DÜZELTİLDİ -->
                 <div id="gridp2" class="tetris-grid"></div>
                 <div class="bars-container" style="margin-top:15px; margin-bottom:0;">
                     <div class="bar-bg" style="height: 26px; border-color:#9c27b0;">
@@ -149,9 +149,9 @@
 
     <script>
         // BABA BURAYA RENDER'DAN ALDIĞIN LİNKİ YAZ! ÖRN: "https://backend-xyz.onrender.com"
-        const socket = io("https://two048-backend-xpnz.onrender.com");
+        const socket = io("https://two048-backend-xpnz.onrender.com/");
 
-        // YENİ: BAĞLANTI DURUMU DİNLEYİCİLERİ
+        // BAĞLANTI DURUMU DİNLEYİCİLERİ
         socket.on('connect', () => {
             document.getElementById('connection-status').innerText = "🟢 Sunucu Aktif! Odaya girebilirsin.";
             document.getElementById('connection-status').style.color = "#4CAF50";
@@ -226,13 +226,20 @@
             document.getElementById('start-btn').disabled = false;
         });
 
+        // İŞTE BÜTÜN DÜĞÜMÜ ÇÖZEN KISIM
         socket.on('game_start', (data) => {
             myRole = data.role; 
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
             
-            localPlayer = new Player('p1', mySelectedClass, true);
-            enemyPlayer = new Player('p2', data.opponentClass, false);
+            // Odaya giren kişinin rolüne göre doğru tahtayı (sol/sağ) veriyoruz.
+            if (myRole === 'p1') {
+                localPlayer = new Player('p1', mySelectedClass, true);
+                enemyPlayer = new Player('p2', data.opponentClass, false);
+            } else {
+                localPlayer = new Player('p2', mySelectedClass, false);
+                enemyPlayer = new Player('p1', data.opponentClass, true);
+            }
 
             isGameActive = true;
             
