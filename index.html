@@ -84,11 +84,16 @@
             </div>
         </div>
         
-        <!-- YENİ EKLENEN ODA NUMARASI KISMI -->
+        <!-- YENİ: BAĞLANTI DURUMU GÖSTERGESİ -->
+        <div id="connection-status" style="color: #ffeb3b; margin-bottom: 15px; font-weight: bold; font-size: 16px;">
+            ⏳ Sunucu Aranıyor... (Uyku modundaysa 1 dk sürebilir)
+        </div>
+        
         <div>
             <input type="text" id="room-input" placeholder="Oda Numarası Belirle">
         </div>
-        <button id="start-btn">Odaya Katıl</button>
+        <!-- YENİ: Başlangıçta Buton Kilitli -->
+        <button id="start-btn" disabled>Odaya Katıl</button>
     </div>
 
     <div id="game-screen">
@@ -104,7 +109,8 @@
                     <div class="bar-bg" style="height: 26px;"><div id="p1-shield-fill" class="bar-fill shield-fill" style="width:100%"></div><div id="p1-shield-text" class="bar-text">🛡️ 50 / 50</div></div>
                     <div class="bar-bg" style="height: 22px;"><div id="p1-rage-fill" class="bar-fill rage-fill" style="width:0%"></div><div id="p1-rage-text" class="bar-text" style="font-size: 13px;">🔥 ÖFKE: %0</div></div>
                 </div>
-                <div id="grid1" class="tetris-grid"></div>
+                <!-- YENİ: ID DÜZELTİLDİ -->
+                <div id="gridp1" class="tetris-grid"></div>
                 <div class="bars-container" style="margin-top:15px; margin-bottom:0;">
                     <div class="bar-bg" style="height: 26px; border-color:#9c27b0;">
                         <div id="p1-attack-fill" class="bar-fill attack-fill" style="width:0%"></div>
@@ -124,7 +130,8 @@
                     <div class="bar-bg" style="height: 26px;"><div id="p2-shield-fill" class="bar-fill shield-fill" style="width:100%"></div><div id="p2-shield-text" class="bar-text">🛡️ 50 / 50</div></div>
                     <div class="bar-bg" style="height: 22px;"><div id="p2-rage-fill" class="bar-fill rage-fill" style="width:0%"></div><div id="p2-rage-text" class="bar-text" style="font-size: 13px;">🔥 ÖFKE: %0</div></div>
                 </div>
-                <div id="grid2" class="tetris-grid"></div>
+                <!-- YENİ: ID DÜZELTİLDİ -->
+                <div id="gridp2" class="tetris-grid"></div>
                 <div class="bars-container" style="margin-top:15px; margin-bottom:0;">
                     <div class="bar-bg" style="height: 26px; border-color:#9c27b0;">
                         <div id="p2-attack-fill" class="bar-fill attack-fill" style="width:0%"></div>
@@ -143,6 +150,19 @@
     <script>
         // BABA BURAYA RENDER'DAN ALDIĞIN LİNKİ YAZ! ÖRN: "https://backend-xyz.onrender.com"
         const socket = io("https://two048-backend-xpnz.onrender.com");
+
+        // YENİ: BAĞLANTI DURUMU DİNLEYİCİLERİ
+        socket.on('connect', () => {
+            document.getElementById('connection-status').innerText = "🟢 Sunucu Aktif! Odaya girebilirsin.";
+            document.getElementById('connection-status').style.color = "#4CAF50";
+            document.getElementById('start-btn').disabled = false;
+        });
+
+        socket.on('connect_error', (err) => {
+            document.getElementById('connection-status').innerText = "🔴 Sunucu kapalı veya uyanıyor (1 dk sürebilir)...";
+            document.getElementById('connection-status').style.color = "#f44336";
+            document.getElementById('start-btn').disabled = true;
+        });
 
         const ROWS = 8;
         const COLS = 6;
@@ -184,7 +204,6 @@
         }
         setupClassSelect();
 
-        // Odaya Katılma Mantığı
         document.getElementById('start-btn').onclick = () => {
             const roomId = document.getElementById('room-input').value.trim();
             if (!roomId) {
@@ -193,7 +212,7 @@
             }
 
             socket.emit('join_room', { classType: mySelectedClass, roomId: roomId });
-            document.getElementById('start-btn').innerText = 'Bağlanıyor...';
+            document.getElementById('start-btn').innerText = 'Odaya Bağlanıyor...';
             document.getElementById('start-btn').disabled = true;
         };
 
