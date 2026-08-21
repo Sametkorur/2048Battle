@@ -119,7 +119,6 @@
 
             <!-- P2 KUTUSU -->
             <div class="player-box p2-box" id="p2-box">
-                <!-- EKSİK OLAN P2 ULTI BUTONU EKLENDİ -->
                 <div class="ultimate-btn" id="p2-ult">RAGE<br>(Q/Enter)</div>
                 <div class="header-info">
                     <div class="player-title" style="color: #f44336;"><span class="class-icon" id="p2-icon">🛡️</span> P2 (SAĞ)</div>
@@ -219,11 +218,13 @@
             document.getElementById('start-btn').disabled = false;
         });
 
-        // İŞTE BÜTÜN DÜĞÜMÜ ÇÖZDÜĞÜMÜZ KISIM!
         socket.on('game_start', (data) => {
             myRole = data.role; 
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
+            
+            // HATANIN ÇÖZÜMÜ: Oyunu karakterler yaratılmadan ÖNCE aktif et!
+            isGameActive = true; 
             
             if (myRole === 'p1') {
                 localPlayer = new Player('p1', mySelectedClass, true);
@@ -233,11 +234,8 @@
                 enemyPlayer = new Player('p1', data.opponentClass, false);
             }
 
-            // Düşmanları birbirine bağlamayı unutmuşum, onu da ekledim.
             localPlayer.enemy = enemyPlayer;
             enemyPlayer.enemy = localPlayer;
-
-            isGameActive = true;
             
             tickInterval = setInterval(() => {
                 if (isGameActive && localPlayer) {
@@ -272,7 +270,6 @@
         });
 
         class Player {
-            // BURADAKİ isLocal MANTIĞI HATAYI TAMAMEN DÜZELTTİ
             constructor(id, classType, isLocal) {
                 this.id = id;
                 this.stats = CLASS_TYPES[classType];
