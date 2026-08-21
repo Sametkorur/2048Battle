@@ -84,7 +84,6 @@
             </div>
         </div>
         
-        <!-- BAĞLANTI DURUMU GÖSTERGESİ -->
         <div id="connection-status" style="color: #ffeb3b; margin-bottom: 15px; font-weight: bold; font-size: 16px;">
             ⏳ Sunucu Aranıyor... (Uyku modundaysa 1 dk sürebilir)
         </div>
@@ -92,7 +91,6 @@
         <div>
             <input type="text" id="room-input" placeholder="Oda Numarası Belirle">
         </div>
-        <!-- Başlangıçta Buton Kilitli -->
         <button id="start-btn" disabled>Odaya Katıl</button>
     </div>
 
@@ -109,7 +107,6 @@
                     <div class="bar-bg" style="height: 26px;"><div id="p1-shield-fill" class="bar-fill shield-fill" style="width:100%"></div><div id="p1-shield-text" class="bar-text">🛡️ 50 / 50</div></div>
                     <div class="bar-bg" style="height: 22px;"><div id="p1-rage-fill" class="bar-fill rage-fill" style="width:0%"></div><div id="p1-rage-text" class="bar-text" style="font-size: 13px;">🔥 ÖFKE: %0</div></div>
                 </div>
-                <!-- ID DÜZELTİLDİ -->
                 <div id="gridp1" class="tetris-grid"></div>
                 <div class="bars-container" style="margin-top:15px; margin-bottom:0;">
                     <div class="bar-bg" style="height: 26px; border-color:#9c27b0;">
@@ -122,6 +119,8 @@
 
             <!-- P2 KUTUSU -->
             <div class="player-box p2-box" id="p2-box">
+                <!-- EKSİK OLAN P2 ULTI BUTONU EKLENDİ -->
+                <div class="ultimate-btn" id="p2-ult">RAGE<br>(Q/Enter)</div>
                 <div class="header-info">
                     <div class="player-title" style="color: #f44336;"><span class="class-icon" id="p2-icon">🛡️</span> P2 (SAĞ)</div>
                 </div>
@@ -130,7 +129,6 @@
                     <div class="bar-bg" style="height: 26px;"><div id="p2-shield-fill" class="bar-fill shield-fill" style="width:100%"></div><div id="p2-shield-text" class="bar-text">🛡️ 50 / 50</div></div>
                     <div class="bar-bg" style="height: 22px;"><div id="p2-rage-fill" class="bar-fill rage-fill" style="width:0%"></div><div id="p2-rage-text" class="bar-text" style="font-size: 13px;">🔥 ÖFKE: %0</div></div>
                 </div>
-                <!-- ID DÜZELTİLDİ -->
                 <div id="gridp2" class="tetris-grid"></div>
                 <div class="bars-container" style="margin-top:15px; margin-bottom:0;">
                     <div class="bar-bg" style="height: 26px; border-color:#9c27b0;">
@@ -149,9 +147,8 @@
 
     <script>
         // BABA BURAYA RENDER'DAN ALDIĞIN LİNKİ YAZ! ÖRN: "https://backend-xyz.onrender.com"
-        const socket = io("https://two048-backend-xpnz.onrender.com/");
+        const socket = io("https://two048-backend-xpnz.onrender.com");
 
-        // BAĞLANTI DURUMU DİNLEYİCİLERİ
         socket.on('connect', () => {
             document.getElementById('connection-status').innerText = "🟢 Sunucu Aktif! Odaya girebilirsin.";
             document.getElementById('connection-status').style.color = "#4CAF50";
@@ -206,11 +203,7 @@
 
         document.getElementById('start-btn').onclick = () => {
             const roomId = document.getElementById('room-input').value.trim();
-            if (!roomId) {
-                alert("Keke önce bir oda numarası girmelisin! (Örn: 1453)");
-                return;
-            }
-
+            if (!roomId) { alert("Keke önce bir oda numarası girmelisin! (Örn: 3131)"); return; }
             socket.emit('join_room', { classType: mySelectedClass, roomId: roomId });
             document.getElementById('start-btn').innerText = 'Odaya Bağlanıyor...';
             document.getElementById('start-btn').disabled = true;
@@ -226,20 +219,23 @@
             document.getElementById('start-btn').disabled = false;
         });
 
-        // İŞTE BÜTÜN DÜĞÜMÜ ÇÖZEN KISIM
+        // İŞTE BÜTÜN DÜĞÜMÜ ÇÖZDÜĞÜMÜZ KISIM!
         socket.on('game_start', (data) => {
             myRole = data.role; 
             document.getElementById('start-screen').style.display = 'none';
             document.getElementById('game-screen').style.display = 'flex';
             
-            // Odaya giren kişinin rolüne göre doğru tahtayı (sol/sağ) veriyoruz.
             if (myRole === 'p1') {
                 localPlayer = new Player('p1', mySelectedClass, true);
                 enemyPlayer = new Player('p2', data.opponentClass, false);
             } else {
-                localPlayer = new Player('p2', mySelectedClass, false);
-                enemyPlayer = new Player('p1', data.opponentClass, true);
+                localPlayer = new Player('p2', mySelectedClass, true);
+                enemyPlayer = new Player('p1', data.opponentClass, false);
             }
+
+            // Düşmanları birbirine bağlamayı unutmuşum, onu da ekledim.
+            localPlayer.enemy = enemyPlayer;
+            enemyPlayer.enemy = localPlayer;
 
             isGameActive = true;
             
@@ -267,20 +263,20 @@
         socket.on('receive_attack', (data) => {
             if (localPlayer) {
                 localPlayer.receiveAttack(data.dmg, data.garbageCount);
+                if (data.effect === 'freeze') localPlayer.applyFreeze();
             }
         });
 
         socket.on('opponent_disconnected', () => {
-            if (isGameActive) {
-                endGame("Rakip Kaçtı! Hükmen Kazandın 🏆");
-            }
+            if (isGameActive) { endGame("Rakip Kaçtı! Hükmen Kazandın 🏆"); }
         });
 
         class Player {
-            constructor(id, classType, isLeft) {
+            // BURADAKİ isLocal MANTIĞI HATAYI TAMAMEN DÜZELTTİ
+            constructor(id, classType, isLocal) {
                 this.id = id;
                 this.stats = CLASS_TYPES[classType];
-                this.isLeft = isLeft;
+                this.isLocal = isLocal;
                 this.hp = this.stats.hp;
                 this.maxHp = this.stats.hp;
                 this.shield = this.stats.shield;
@@ -297,7 +293,7 @@
                 document.getElementById(`${id}-icon`).innerText = this.stats.icon;
                 
                 this.initDOM();
-                if(this === localPlayer) this.spawnPiece(); 
+                if(this.isLocal) this.spawnPiece(); 
                 this.updateUI();
             }
 
@@ -351,9 +347,7 @@
                 if(!this.currentPiece || !isGameActive || this.isFrozen) return;
                 
                 if (hard) {
-                    while(!this.checkColision(this.currentPiece.r + 1, this.currentPiece.c)) {
-                        this.currentPiece.r++;
-                    }
+                    while(!this.checkColision(this.currentPiece.r + 1, this.currentPiece.c)) { this.currentPiece.r++; }
                     this.landPiece();
                 } else {
                     if(!this.checkColision(this.currentPiece.r + 1, this.currentPiece.c)) {
@@ -414,7 +408,7 @@
                     if(hasMerged || toDestroy.length > 0) mergedInStep = true;
                 }
 
-                if (stepDamageDealt > 0) {
+                if (stepDamageDealt > 0 && this.isLocal) {
                     let finalDmg = stepDamageDealt * this.stats.dmgMult;
                     if (stepCombo > 1 && this.stats.comboMult) {
                         finalDmg *= this.stats.comboMult;
@@ -435,7 +429,7 @@
 
                 this.render();
                 this.updateUI();
-                if(this === localPlayer) this.spawnPiece();
+                if(this.isLocal) this.spawnPiece();
             }
 
             executeMerge(r1, c1, r2, c2, block, toDestroy) {
@@ -468,8 +462,17 @@
                 } else if (type === 'lightning') {
                     for(let i=0; i<ROWS; i++) toDestroy.push({r: i, c: c});
                 } else if (type === 'freeze') {
-                    this.isFrozen = true; 
+                    if (this.isLocal) socket.emit('attack_opponent', { dmg: 0, garbageCount: 0, effect: 'freeze' });
                 }
+            }
+
+            applyFreeze() {
+                this.isFrozen = true;
+                this.gridEl.classList.add('frozen');
+                setTimeout(() => {
+                    this.isFrozen = false;
+                    this.gridEl.classList.remove('frozen');
+                }, 3000);
             }
 
             applyGravity() {
@@ -494,8 +497,7 @@
                 attackText.style.color = '#ab47bc';
                 this.boxEl.appendChild(attackText);
                 setTimeout(() => attackText.remove(), 1000);
-
-                socket.emit('attack_opponent', { dmg: 0, garbageCount: stacks * 2 });
+                if (this.isLocal) socket.emit('attack_opponent', { dmg: 0, garbageCount: stacks * 2 });
             }
 
             receiveAttack(dmg, garbageCount) {
@@ -521,7 +523,7 @@
 
                 if (this.hp <= 0) {
                     endGame("ÖLDÜN! RAKİP KAZANDI ☠️");
-                    socket.emit('attack_opponent', { dmg: 9999, garbageCount: 0 }); 
+                    if(this.isLocal) socket.emit('attack_opponent', { dmg: 9999, garbageCount: 0 }); 
                 }
             }
 
@@ -536,7 +538,7 @@
                 this.boxEl.appendChild(ultText);
                 setTimeout(() => ultText.remove(), 1000);
 
-                socket.emit('attack_opponent', { dmg: 80 / this.enemy.stats.defMult, garbageCount: 5 });
+                if (this.isLocal) socket.emit('attack_opponent', { dmg: 80 / this.enemy.stats.defMult, garbageCount: 5 });
                 this.updateUI();
             }
 
@@ -603,7 +605,7 @@
                     }
                 }
 
-                if (this === localPlayer) {
+                if (this.isLocal) {
                     socket.emit('sync_state', {
                         board: this.board,
                         hp: this.hp,
